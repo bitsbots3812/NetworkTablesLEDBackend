@@ -7,6 +7,8 @@ import edu.wpi.first.networktables.StringSubscriber;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import edu.wpi.first.util.WPIUtilJNI;
 
@@ -14,6 +16,25 @@ import edu.wpi.first.util.WPIUtilJNI;
  * Program
  */
 public class Program {
+
+    static SerialLED leds = new SerialLED("COM4", 57600, 10);
+
+    static NetworkTableInstance inst = NetworkTableInstance.getDefault();
+    static NetworkTable ledTable = inst.getTable("ledControl");
+    static IntegerArraySubscriber color   = ledTable.getIntegerArrayTopic("color").subscribe(new long[] {0,0,128});
+    static StringSubscriber       pattern = ledTable.getStringTopic("pattern").subscribe("solid");
+
+    static long[] currentColor = {0,0,128};
+    static String currentPattern = "solid";
+
+    static void updateLeds() {
+        long[] currentColor = color.get();
+        
+        if (currentColor.length == 3) {
+            leds.setColor((byte)currentColor[0], (byte)currentColor[1], (byte)currentColor[2]);
+        }
+    }
+
     public static void main(String[] args) throws IOException {
 
         //WPILIB Library Loading Weirdness.
@@ -23,24 +44,17 @@ public class Program {
         CombinedRuntimeLoader.loadLibraries(Program.class, "wpiutiljni", "ntcorejni");
         //=====================================================================================================
 
-
-        NetworkTableInstance inst = NetworkTableInstance.getDefault();
         inst.startDSClient(); //Assume we are running on the driver station and attempt to connect to the robot.
-
-        NetworkTable ledTable = inst.getTable("ledControl");
-
-        IntegerArraySubscriber color   = ledTable.getIntegerArrayTopic("color").subscribe(new long[] {0,0,0});
-        StringSubscriber       pattern = ledTable.getStringTopic("pattern").subscribe("solid");
 
         
         //Instantiate LED Controller
-        SerialLED leds = new SerialLED("COM4", 57600, 10);
 
-        byte R = 0;
+        Timer updateTimer = new Timer();
 
-        while (true) {
-            leds.setColor(R, (byte) R, (byte) R);
-            R++;
-        }
+        updateTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+                updateLeds();
+            }
+        }, 0, 100);
     }
 }
