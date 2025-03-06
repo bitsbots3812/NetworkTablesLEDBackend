@@ -1,15 +1,14 @@
 
+import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import edu.wpi.first.networktables.IntegerArraySubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.networktables.StringSubscriber;
 import edu.wpi.first.util.CombinedRuntimeLoader;
-
-import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
-
 import edu.wpi.first.util.WPIUtilJNI;
 
 /**
@@ -17,7 +16,7 @@ import edu.wpi.first.util.WPIUtilJNI;
  */
 public class Program {
 
-    static SerialLED leds = new SerialLED("COM4", 57600, 10);
+    static SerialLED leds;
 
     static NetworkTableInstance inst = NetworkTableInstance.getDefault();
     static NetworkTable ledTable = inst.getTable("ledControl");
@@ -43,6 +42,17 @@ public class Program {
 
         CombinedRuntimeLoader.loadLibraries(Program.class, "wpiutiljni", "ntcorejni");
         //=====================================================================================================
+
+        String portDesc = "";
+
+        if (args.length == 0) {
+            System.err.println("Invalid args");
+        } 
+        else {
+            portDesc = args[0];
+        }
+
+        leds = leds = new SerialLED(portDesc, 57600, 10);
 
         inst.startDSClient(); //Assume we are running on the driver station and attempt to connect to the robot.
 
