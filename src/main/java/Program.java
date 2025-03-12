@@ -1,5 +1,8 @@
 
+import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InaccessibleObjectException;
+import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -18,19 +21,27 @@ public class Program {
 
     static SerialLED leds;
 
-    static NetworkTableInstance inst = NetworkTableInstance.getDefault();
-    static NetworkTable ledTable = inst.getTable("ledControl");
-    static IntegerArraySubscriber color   = ledTable.getIntegerArrayTopic("color").subscribe(new long[] {0,0,128});
-    static StringSubscriber       pattern = ledTable.getStringTopic("pattern").subscribe("solid");
+    static NetworkTableInstance   inst;     
+    static NetworkTable           ledTable; 
+    static IntegerArraySubscriber color;    
+    static StringSubscriber       pattern;  
 
     static long[] currentColor = {0,0,128};
     static String currentPattern = "solid";
 
     static void updateLeds() {
-        long[] currentColor = color.get();
+
+        if (inst.isConnected()) {
+
+            currentColor = color.get();
         
-        if (currentColor.length == 3) {
-            leds.setColor((byte)currentColor[0], (byte)currentColor[1], (byte)currentColor[2]);
+            if (currentColor.length == 3) {
+                leds.setColor((byte)currentColor[0], (byte)currentColor[1], (byte)currentColor[2]);
+            }
+        }
+
+        else {
+            leds.setColor((byte)5, (byte)0, (byte)0);
         }
     }
 
@@ -43,16 +54,23 @@ public class Program {
         CombinedRuntimeLoader.loadLibraries(Program.class, "wpiutiljni", "ntcorejni");
         //=====================================================================================================
 
-        String portDesc = "";
+        inst     = NetworkTableInstance.getDefault();
+        ledTable = inst.getTable("ledControl");
+        color    = ledTable.getIntegerArrayTopic("color").subscribe(new long[] {0,0,128});
+        pattern  = ledTable.getStringTopic("pattern").subscribe("solid");
 
-        if (args.length == 0) {
-            System.err.println("Invalid args");
-        } 
-        else {
-            portDesc = args[0];
-        }
+        File config = new File("LEDBackend.cfg");
 
-        leds = leds = new SerialLED(portDesc, 57600, 10);
+        String portDesc;
+
+        if (!config.canRead())
+            throw new InaccessibleObjectException("Cannot read LEDConfig.cfg");
+
+        Scanner reader = new Scanner(config);
+
+        portDesc = reader.nextLine();
+
+        leds = new SerialLED(portDesc, 57600, 10);
 
         inst.startDSClient(); //Assume we are running on the driver station and attempt to connect to the robot.
 
